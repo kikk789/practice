@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="personalHistoryNew">
+	<resultMap id="ListVO" type="topia.com.prac.vo.ListVO">
+		<result column="USER_REGISTER_DATE" property="userRegisterDate"/>
+		<result column="USER_IDX" property="userIdx"/>
+		<result column="USER_NAME" property="userName"/>
+		<result column="USER_SEX" property="userSex"/>
+		<result column="USER_COMP" property="userComp"/>
+		<result column="USER_DEPT" property="userDept"/>
+		<result column="career_date" property="careerDate"/>
+
+	</resultMap>
+
+	<sql id="userListWhere">
+		<where>
+			<if test="userListSearchPeriodNew != null and userListSearchPeriodNew != ''">
+				<choose>
+					<when test="userListSearchPeriodNew == 'userName'">
+						user_name LIKE '%${userListSearchWordNew}%'
+					</when>
+					<when test="userListSearchPeriodNew == 'userComp'">
+						user_comp LIKE '%${userListSearchWordNew}%'
+					</when>
+					<when test="userListSearchPeriodNew == 'userDept'">
+						user_dept LIKE '%${userListSearchWordNew}%'
+					</when>
+					<when test="userListSearchPeriodNew == 'userAddress'">
+						user_address LIKE '%${userListSearchWordNew}%'
+					</when>
+					<when test="userListSearchPeriodNew == 'userCareerLength'">
+						c.career_date LIKE '%${userListSearchWordNew}%'
+					</when>
+				</choose>
+				
+			</if>
+			
+		</where>
+	</sql>
+
+	<select id="userListNew" resultMap="ListVO" parameterType="hashmap">
+
+	SELECT * FROM
+		(SELECT ROWNUM AS RNUM, A.* FROM
+			(SELECT DISTINCT u.user_idx
+				, u.user_name
+				, u.user_comp
+				, u.user_dept
+				, to_char(u.user_register_date, 'yyyy-mm-dd HH24:MI:SS') AS userRegisterDate
+				, u.user_sex
+				, c.career_date
+			FROM
+				user_info u
+			LEFT OUTER JOIN
+				user_info_skill s
+			ON u.user_idx=s.user_idx
+			LEFT OUTER JOIN
+				(select
+					user_idx
+					,round(abs(sum((nvl(trunc(skill_startdate),sysdate) - nvl(trunc(skill_enddate),sysdate))/365))) as career_date
+				from user_info_skill group by user_idx) c
+	 		ON s.user_idx=c.user_idx
+
+			<include refid="userListWhere"/>
+
+
+			ORDER BY user_idx DESC
+			)A
+			<![CDATA[
+				WHERE ROWNUM <= #{pageNUM}* #{pageSIZE}
+				)
+			WHERE RNUM >= (#{pageNUM}* #{pageSIZE}) - #{pageSIZE} +1
+
+			]]>
+
+	</select>
+	
+	<select id="userListCountNew" resultType="java.lang.Integer">
+		SELECT
+			COUNT(DISTINCT u.user_idx)
+		FROM
+			user_info u
+		LEFT OUTER JOIN
+			user_info_skill s
+		ON u.user_idx=s.user_idx
+			LEFT OUTER JOIN
+				(select
+					user_idx
+					,round(abs(sum((nvl(trunc(skill_startdate),sysdate) - nvl(trunc(skill_enddate),sysdate))/365))) as career_date
+				from user_info_skill group by user_idx) c
+	 		ON s.user_idx=c.user_idx
+
+		<include refid="userListWhere"/>
+		
+	</select>
+	<delete id ="deleteListInfo">
+		delete user_info where user_idx=#{userIdx}
+	</delete>
+
+	<delete id ="deleteListCareer">
+		delete user_info_career where user_idx=#{userIdx}
+	</delete>
+
+	<delete id ="deleteListEdu">
+		delete user_info_edu where user_idx=#{userIdx}
+	</delete>
+
+	<delete id ="deleteListLicen">
+		delete user_info_licen where user_idx=#{userIdx}
+	</delete>
+
+	<delete id ="deleteListQualifi">
+		delete user_info_qualifi where user_idx=#{userIdx}
+	</delete>
+
+	<delete id ="deleteListSkill">
+		delete user_info_skill where user_idx=#{userIdx}
+	</delete>
+
+	<delete id ="deleteListTraining">
+		delete user_info_training where user_idx=#{userIdx}
+	</delete>
+
+	<delete id ="deleteListImage">
+		delete image where user_idx=#{userIdx}
+	</delete>
+
+	<select id ="selectImageByIdx" resultType="string">
+		select img_name from image where user_idx=#{userIdx}
+
+	</select>
+
+</mapper>
